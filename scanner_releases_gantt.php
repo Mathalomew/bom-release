@@ -19,8 +19,6 @@
 
       <h3 style = "color: #01B0F1;">Scanner -> System Releases Gantt</h3>
 
-    
-        
 <html>
 <head>
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
@@ -46,31 +44,61 @@
 
       data.addRows([
 	   
-	
 	<?php
-	  $query = "SELECT * FROM releases ORDER BY open_date ASC";
-	  $exec = mysqli_query($con,$query);
-	  while($row = mysqli_fetch_array($exec)){
+  // Access preferences database and set Gantt chart preferences for future query
+  $sql = "SELECT * FROM preferences WHERE id='1';";
+	 $result = $db->query($sql);
+	
+	 if ($result->num_rows > 0) {
+                $row = $result->fetch_assoc(); 
+			
+			
+				$config_start_toggle  = $row['sort_by'];
+				$config_start_date	  = $row['open_date'];
+				$config_end_date 	  = $row['rtm_date'];
+				$config_type 		  = $row['type'];
+				$config_status 		  = $row['status'];
+				
+				
+				$query = "SELECT * FROM releases WHERE open_date >= '".$config_start_date."' AND rtm_date <= '".$config_end_date."'";
+	
+				if($config_type != "All" && $config_status != "All"){
+					$query.= " AND type='".$config_type."' AND status='".$config_status."'";
+				}
+				else{
+					if($config_type != "All"){
+					$query.= " AND type='".$config_type."'"; 
+				}
+				else{
+					if($config_status != "All"){
+					$query.= " AND status='".$config_status."'";
+				}
+			}
+		}
+		
+		$query.= " ORDER BY ".$config_start_toggle." ASC;" ;
+      }
+	 
+	 // Produce output from releases databases with prepared query from above
+  	   $exec = mysqli_query($con,$query);
+	    while($row = mysqli_fetch_array($exec)){
 		  
 		  $id = $row['id'];
 		  $name = $row['name'];
+		
+		  $start_date = str_replace("-", ",",$row[$config_start_toggle]);
 		  
 		  
-		  //!-------------USE 'open_date' || 'dependency_date' HERE-------------!
-		  $start_date = $row['open_date'];
-		  
-		  
-		  $rtm_date = $row['rtm_date'];
+		  $rtm_date = str_replace("-", ",",$row['rtm_date']);
 		  $type = $row['type'];
 		  
-		  echo "['".$id."','".$name."','".$id."',new Date('".$start_date."'),new Date('".$rtm_date."'),null,50,null],";
-	}	
-	  ?>
+		  echo "['".$id."','".$name."','".$id."',new Date(".$start_date."),new Date(".$rtm_date."),null,50,null],";
+		}	?>
       ]);
 
       var options = {
 		width: 2000,
-		height: data.getNumberOfRows() * 100,
+		height: data.getNumberOfRows() * 50,
 		gantt: {
 			trackHeight:50,
 			labelMaxWidth: 600
