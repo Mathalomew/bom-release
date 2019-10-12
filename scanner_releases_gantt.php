@@ -1,18 +1,14 @@
 <?php
-
   $nav_selected = "SCANNER"; 
   $left_buttons = "YES"; 
   $left_selected = "RELEASESGANTT"; 
-
   include("./nav.php");
   global $db;
  
   $con = mysqli_connect("localhost", "root", ""); 
   mysqli_select_db($con, "bom");
   
-
   
-
 ?>
 <div class="right-content">
     <div class="container">
@@ -25,13 +21,10 @@
   <script type="text/javascript">
     google.charts.load('current', {'packages':['gantt']});
     google.charts.setOnLoadCallback(drawChart);
-
     function daysToMilliseconds(days) {
       return days * 24 * 60 * 60 * 1000;
     }
-
     function drawChart() {
-
       var data = new google.visualization.DataTable();
       data.addColumn('string', 'Task ID');
       data.addColumn('string', 'Task Name');
@@ -41,23 +34,24 @@
       data.addColumn('number', 'Duration');
       data.addColumn('number', 'Percent Complete');
       data.addColumn('string', 'Dependencies');
-
       data.addRows([
 	   
 	<?php
-  // Access preferences database and set Gantt chart preferences for future query
-  $sql = "SELECT * FROM preferences WHERE id='1';";
-	 $result = $db->query($sql);
-	
-	 if ($result->num_rows > 0) {
-                $row = $result->fetch_assoc(); 
-			
-			
-				$config_start_toggle  = $row['sort_by'];
-				$config_start_date	  = $row['open_date'];
-				$config_end_date 	  = $row['rtm_date'];
-				$config_type 		  = $row['type'];
-				$config_status 		  = $row['status'];
+					
+			if(isset($_SESSION['submit'])){
+				$config_start_toggle  = $_SESSION['start_option'];
+				$config_start_date	  = $_SESSION['start_date'];
+				$config_end_date 	  = $_SESSION['end_date'];
+				$config_type 		  = $_SESSION['type_option'];
+				$config_status 		  = $_SESSION['status_option'];
+			}
+			else{
+				$config_start_toggle  = "open_date";
+				$config_start_date	  = "1970-01-01";
+				$config_end_date 	  = "2070-01-01";
+				$config_type 		  = "All";
+				$config_status 		  = "All";
+			}
 				
 				
 				$query = "SELECT * FROM releases WHERE open_date >= '".$config_start_date."' AND rtm_date <= '".$config_end_date."'";
@@ -71,52 +65,54 @@
 				}
 				else{
 					if($config_status != "All"){
-					$query.= " AND status='".$config_status."'";
+						$query.= " AND status='".$config_status."'";
+					}
 				}
-			}
-		}
-		
+				
 		$query.= " ORDER BY ".$config_start_toggle." ASC;" ;
       }
 	 
 	 // Produce output from releases databases with prepared query from above
   	   $exec = mysqli_query($con,$query);
-	    while($row = mysqli_fetch_array($exec)){
+	   
+	   if(mysqli_num_rows($exec) == 0){
+		   echo "['N/A','No results',null,new Date(0000,00,00),new Date(0000,00,00),null,0,null],";
+	   }
+	   else{
+			while($row = mysqli_fetch_array($exec)){
 		  
-		  $id = $row['id'];
-		  $name = $row['name'];
+				$id = $row['id'];
+				$name = $row['name'];
 		
-		  $start_date = str_replace("-", ",",$row[$config_start_toggle]);
+				$start_date = str_replace("-", ",",$row[$config_start_toggle]);
 		  
 		  
-		  $rtm_date = str_replace("-", ",",$row['rtm_date']);
-		  $type = $row['type'];
+				$rtm_date = str_replace("-", ",",$row['rtm_date']);
+				$type = $row['type'];
 		  
-		  echo "['".$id."','".$name."','".$id."',new Date(".$start_date."),new Date(".$rtm_date."),null,50,null],";
-		}	?>
+				echo "['".$id."','".$name."','".$id."',new Date(".$start_date."),new Date(".$rtm_date."),null,50,null],";
+			}
+	   }
+	   ?>
       ]);
-
       var options = {
 		width: 2000,
-		height: data.getNumberOfRows() * 50,
+		height: data.getNumberOfRows() * 55,
 		gantt: {
 			trackHeight:50,
 			labelMaxWidth: 600
 		}
       };
-
       var chart = new google.visualization.Gantt(document.getElementById('chart_div'));
-
       chart.draw(data, options);
     }
   </script>
+  
 </head>
 <body>
   <div id="chart_div"></div>
 </body>
-</html>
-
-        
+</html>        
 
  <style>
    tfoot {

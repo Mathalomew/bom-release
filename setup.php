@@ -2,13 +2,12 @@
   $nav_selected = "SETUP";
   $left_buttons = "NO";
   $left_selected = "";
-
   include("./nav.php");
   global $db;
-  
   /*http://form.guide/php-form/php-form-action-self.html
   <?php echo htmlentities($_SERVER['PHP_SELF']);?>*/
  ?>
+ 
 <html>
 <body onload="update_form()">
 
@@ -67,84 +66,55 @@
 </html>
 
 <?php
+	// Store form values in $_SESSION variables on submission
 			if(isset($_POST['submit'])){
-				$start_option = $_POST['start_option'];
-				$start_date	  = $_POST['start_date'];
-				$end_date 	  = $_POST['end_date'];
-				$type 		  = $_POST['type_option'];
-				$status 	  = $_POST['status_option'];
-				
-			//Call database to store new posted vals
-			$sql = "UPDATE preferences 
-			  SET open_date='".$start_date."',rtm_date='".$end_date."', status ='".$status."' ,type= '".$type."' ,sort_by='".$start_option."'
-			  WHERE id='1'";
-			 
-			//Maybe check if query succeeded
-			$result = $db->query($sql);	
-			}/*
-			else{
-				//call javascript function  to call php to access database, put bits of php in option values to sub vals			}
-	*/
+				$_SESSION['submit']		   = $_POST['submit'];
+				$_SESSION['start_option']  = $_POST['start_option'];
+				$_SESSION['start_date']    = $_POST['start_date'];
+				$_SESSION['end_date']  	   = $_POST['end_date'];
+				$_SESSION['type_option']   = $_POST['type_option'];
+				$_SESSION['status_option'] = $_POST['status_option'];
+			}
 ?>
 
 <script>
 	
-	function update_form(){
-	
-	   <?php
-			$sql = "SELECT * FROM preferences WHERE id='1';";
-			$result = $db->query($sql);
-	
-			 if ($result->num_rows > 0) {
-                $row = $result->fetch_assoc(); 
+	function update_form(){		
+		
+		var flag = '<?php echo isset($_SESSION['submit'])? "true" : "false"; ?>' ;
+		
+		if(flag=="true"){
+			document.getElementById("start_opt").value  	= '<?php echo $_SESSION['start_option']; ?>'; 
+			document.getElementById("start_opt").innerHTML  = switch_param('<?php echo $_SESSION['start_option']; ?>');
 			
-				$db_start_option  = $row['sort_by'];
-				$db_start_date	  = $row['open_date'];
-				$db_end_date 	  = $row['rtm_date'];
-				$db_type 		  = $row['type'];
-				$db_status 		  = $row['status'];
-             }
-		?>;
-		//https://stackoverflow.com/questions/5895842/how-to-assign-php-variable-value-to-javascript-variable
-		
-		document.getElementById("start_opt").value = '<?php echo $db_start_option;?>';
-		document.getElementById("start_opt").innerHTML = switch_param('<?php echo $db_start_option;?>');
-		
-		document.getElementById("stat_def").value = '<?php echo $db_status;?>';
-		document.getElementById("stat_def").innerHTML = '<?php echo $db_status;?>';
-		
-		document.getElementById("type_def").value = '<?php echo $db_type;?>';
-		document.getElementById("type_def").innerHTML = '<?php echo $db_type;?>';
-		
-		
-		document.getElementById("e_date").value = '<?php echo $db_end_date;?>';
-		
-		document.getElementById("s_date").value = '<?php echo $db_start_date;?>';
-		
+			document.getElementById("s_date").value 	 = '<?php echo $_SESSION['start_date']; ?>'; 	
+			document.getElementById("s_date").innerHTML  = '<?php echo $_SESSION['start_date']; ?>';
+			
+			document.getElementById("e_date").value 	 = '<?php echo $_SESSION['end_date']; ?>'; 	  	   
+			document.getElementById("e_date").innerHTML  = '<?php echo $_SESSION['end_date']; ?>';
+			
+			document.getElementById("type_def").value 	 = '<?php echo $_SESSION['type_option']; ?>'; 	   
+			document.getElementById("type_def").innerHTML  = '<?php echo $_SESSION['type_option']; ?>';
+			
+			document.getElementById("stat_def").value 	=  '<?php echo $_SESSION['status_option']; ?>';	 
+			document.getElementById("stat_def").innerHTML  = '<?php echo $_SESSION['status_option']; ?>';
+		}
 	
-		//alert(returned);
 }
-</script>
-
-<script>
-
 // Function to convert open_date/dependency_date into better looking strings for the form input id="start_opt"
-
-function switch_param(input){
+		function switch_param(input){
 	
-	var vahr = input;
+			var vahr = input;
 	
-	if(vahr == "dependency_date"){
-		vahr = "Dependency Date";
-	}
-	else if(vahr == "open_date"){
-		vahr = "Open Date";
-	}
-
-	return vahr;
-}
+			if(vahr == "dependency_date"){
+				vahr = "Dependency Date";
+			}
+			else if(vahr == "open_date"){
+				vahr = "Open Date";
+			}
+			return vahr;
+		}
 	
 </script>
-
 
 <?php include("./footer.php"); ?>
