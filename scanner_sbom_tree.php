@@ -23,25 +23,43 @@
 	<?php 
 	
 	
-	$sql = "SELECT app_name, app_version, app_status, cmp_name, cmp_version, cmp_type, cmp_status, notes 
+	$sql = "SELECT app_name, app_version, app_status, 
+				   cmp_name, cmp_version, cmp_type, cmp_status,
+				   request_id, request_date, request_status, request_step,
+				   notes 
 			FROM sbom";
+			
 	$result = $db->query($sql);
-	$bom_ary;	// Array to store Application info and that of its components
-	$key;
-                if ($result->num_rows > 0) {
+	
+	
+	$bom_ary;	// Not so nice 3-dimensional array that stores BOM table data. But, because no searching is involved you just enter the associative keys to access the data.
+	$base_key;	// Stores base node data
+	$root_key;	// Stores root node data
+    
+
+		if ($result->num_rows > 0) {
                    
-                    while($row = $result->fetch_assoc()) {
-						
-						$key = $row["app_name"]." ".$row["app_version"];
-						$value = $row["app_status"]."-".$row["cmp_name"]." ".$row["cmp_version"]
-					        ."-".$row["cmp_type"]."-".$row["cmp_status"]."-".$row["notes"];
+			while($row = $result->fetch_assoc()) {
+			
+			
+			// Store relevant components by Application (name+id)
+			
+			$base_key = $row["app_name"];
+			$root_key = $row["app_name"]." ".$row["app_version"];
+			$child_key = $row["cmp_name"]." ".$row["cmp_version"];
+			
+			//$row["app_status"]
+			$value = $row["cmp_type"]."@".$row["cmp_status"]
+				."@".$row["request_id"]."@".$row["request_date"]."@".$row["request_status"]."@".$row["request_step"]
+				."@".$row["notes"];
 								 
-						$bom_ary[$key][] = explode("-", $value);
-                    }
-                }
-                else {
-                    echo "0 results";
-                }
+				$bom_ary[$base_key][$root_key][$child_key][] = explode("@", $value);
+            }
+         }
+         else {
+            echo "0 results";
+         }
+		 
      $result->close();
      ?>
 
@@ -52,6 +70,7 @@
 	<caption>
 		<button id="expand" style="font-size: 10px">Expand</button>
 		<button id="collapse" style="font-size: 10px">Collapse</button>
+		<button id="colorize" style="font-size: 10px">Colorize</button>
 	</caption>
 	
 	<thead>
@@ -63,6 +82,10 @@
 		echo "<th>Application Status</th>";
 		echo "<th>Component Type</th>";
 		echo "<th>Component Status</th>";
+		echo "<th>Request Id</th>";
+		echo "<th>Request Date</th>";
+		echo "<th>Request Status</th>";
+		echo "<th>Request Step</th>";
 		echo "<th>Notes</th>";
 	?>
 	</tr>
@@ -71,65 +94,79 @@
 	<tbody>
 	<?php
 		// Set up the root nodes
-		$count=0;
+
 		$parent_id=1;
+		$root_id = 1;
+		$child_id = 1;
 		
 		ksort($bom_ary);
 		
-		foreach($bom_ary as $key=>$value){
-			echo '<tr data-tt-id="'.$parent_id.'">';
-			echo '<td>'.$key.'</td>';
+		// Set up base - App names only
+		foreach($bom_ary as $base=>$root_ary){
 			
+			base($base, $parent_id);
 			
-		// Set up the child nodes
-		
-		$child_index=0;
-		$add_status = 1;
-		
-		foreach($value as $key=>$child){
-			
-			// Gets individual child record
-			$child_data = $value[$child_index];
-			
-			
-			for($index=0; $index < count($child_data); $index++){
+			// Set up root - App names + Versions only
+			foreach($root_ary as $root=>$cmp_array){
+				root($root, $parent_id, $root_id);
 				
-				if($index == 0){
+				$child_parent = $parent_id.'.'.$root_id;
 				
-					if($add_status === 1){
-						echo '<td>'.$child_data[0].'</td>';
-						echo '</tr>';	// Closing tr tag for root note data
-						$add_status = 0;
-											}
-					else{
-						echo '</tr>';
-					}
-					
-					continue;
-
+				// Set up component - Cmp Name + Versions only
+				foreach($cmp_array as $child=>$cmp_values){
+				
+					child($child, $cmp_values, $child_parent ,$child_id);	
+					$child_id++;
 				}
 				
-				
-				if($index == 1){
-					echo '<tr data-tt-id="'.$parent_id.".".($child_index+1).'" tr data-tt-parent-id="'.$parent_id.'">';
-					echo '<td>'.$child_data[$index].'</td>';
+				$child_id = 1;
+				$root_id++;
+			}
+			$root_id = 1;
+			$parent_id++;
+		}
+		
+		//<tr data-tt-id="x">
+		function base($base, $parent_id){
+			echo '<tr id="root" data-tt-id="'.$parent_id.'" id="base">';
+			echo '<td id="'.$base.'">'.$base.'</td>';
+			
+			for($index=0; $index < 8; $index++){
 					echo '<td></td>';
-					continue;
-				}
-				
-				//WORKS
-				echo '<td>'.$child_data[$index].'</td>';
 			}
 			
+			echo "</tr>";
+		}
+
+		function root($root, $parent_id, $root_id){
+			echo '<tr id="child" data-tt-id="'.$parent_id.'.'.$root_id.'" data-tt-parent-id="'.$parent_id.'">';
+				echo '<td id="'.$root.'">'.$root.'</td>';
+				
+				for($index=0; $index < 8; $index++){
+					echo '<td></td>';
+				}
 			echo '</tr>';
-			$child_index++;
 		}
-		
-		
-		
-		$parent_id++;
+
+		function child($child, $child_ary, $parent_id, $child_id){
+			echo '<tr id="leaf" data-tt-id="'.$parent_id.'.'.$child_id.'" data-tt-parent-id="'.$parent_id.'">';
+				echo '<td id="'.$child.'">'.$child.'</td>';	
+				
+				foreach($child_ary as $leaf=>$data)
+					leaf($data);
+					
+			echo '</tr>';
 		}
-	?>	
+
+		
+		function leaf($leaf_ary){
+			echo '<td></td>';
+			
+			foreach($leaf_ary as $key=>$value){
+				echo '<td>'.$value.'</td>';
+			}
+	    }
+?>	
 	</tbody>
 	
 </table>	
@@ -154,6 +191,14 @@
 					//alert("Collapse");
 				});
 		});
+		
+		$(document).ready(function(){
+				$("#colorize").click(function(){
+					var classe = $('#root').css("background-color");
+					
+				});
+		});
+		
 		</script>
 		
 		
